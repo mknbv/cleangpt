@@ -42,6 +42,11 @@ class LinearTest(TorchTestCase):
 
 class AttentionTest(TorchTestCase):
   """ Attention layer test. """
+  def tensor_assign(self, lhs, rhs):
+    """Checks the shape and assigns to the tensor."""
+    self.assertEqual(lhs.shape, rhs.shape)
+    lhs.data = rhs.data
+
   def test_forward(self):
     """Forward method test."""
     inputs = torch.normal(0, 1, (3, 5, 4), dtype=torch.float64)
@@ -60,12 +65,14 @@ class AttentionTest(TorchTestCase):
         dropout=0.2,
         batch_first=True,
     )
-    attention_nn.in_proj_weight = attention_layer.input_linear.weight
-    attention_nn.in_proj_bias = attention_layer.input_linear.bias
-    attention_nn.out_proj.weight = \
-        attention_layer.output_module[0].weight
-    attention_nn.out_proj.bias = \
-        attention_layer.output_module[0].bias
+    self.tensor_assign(attention_nn.in_proj_weight,
+                       attention_layer.input_linear.weight)
+    self.tensor_assign(attention_nn.in_proj_bias,
+                       attention_layer.input_linear.bias)
+    self.tensor_assign(attention_nn.out_proj.weight,
+                       attention_layer.output_module[0].weight)
+    self.tensor_assign(attention_nn.out_proj.bias,
+                       attention_layer.output_module[0].bias)
 
     attn_mask = nn.Transformer.generate_square_subsequent_mask(inputs.shape[1])
     self.reset_seeds()
