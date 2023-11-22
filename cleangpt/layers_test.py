@@ -86,3 +86,13 @@ class AttentionTest(TorchTestCase):
     self.assertAllClose(actual[1], expected[1])
     self.assertEqual(actual[1] == 0, expected[1] == 0)
     self.assertAllClose(actual[0], expected[0])
+
+
+class LayerNormTest(TorchTestCase):
+  """Layer normalization test."""
+  def test_forward(self):
+    """Test the forward method of the LayerNorm module."""
+    inputs = torch.normal(0, 1, (2, 3, 5), dtype=torch.float64)
+    actual = layers.LayerNorm((3, 5)).double().forward(inputs)
+    expected = nn.LayerNorm((3, 5)).double().forward(inputs)
+    self.assertAllClose(actual, expected)

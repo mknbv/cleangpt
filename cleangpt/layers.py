@@ -127,3 +127,29 @@ class Attention(nn.Module):
         .reshape(batch_size, seqlen, embedding_size)
     )
     return (output, attn_weights) if return_attn_weights else output
+
+
+class LayerNorm(nn.Module):
+  """Layer normalization as is described in the paper.
+
+  See https://arxiv.org/abs/1607.06450
+  """
+  def __init__(self, normalized_shape, eps=1e-5):
+    super().__init__()
+    self.normalized_shape = normalized_shape
+    self.eps = eps
+    self.weight = nn.Parameter(torch.ones(*normalized_shape))
+    self.bias = nn.Parameter(torch.zeros(*normalized_shape))
+
+  def forward(self, inputs):
+    """Applies layer normalization to the inputs."""
+    if inputs.shape[-len(self.normalized_shape):] != self.normalized_shape:
+      raise ValueError(f"{inputs.shape=} does not match "
+                       f"{self.normalized_shape=}")
+    dims = tuple(i for i in range(-len(self.normalized_shape), 0))
+    mean = inputs.mean(dims, keepdims=True)
+    var = inputs.var(dims, unbiased=False, keepdims=True)
+    return (
+        (inputs - mean) / torch.sqrt(var + self.eps)
+        * self.weight + self.bias
+    )
