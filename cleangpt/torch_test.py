@@ -26,11 +26,15 @@ class TorchTestCase(TestCase):
     self.reset_seeds()
 
   # pylint: disable=invalid-name
-  def assertEqual(self, actual, expected):
+  def assertEqual(self, first, second, msg=None):
     """Tests if values are equal."""
-    if isinstance(actual, torch.Tensor) or isinstance(expected, torch.Tensor):
-      return nt.assert_equal(_np(actual), _np(expected))
-    return super().assertEqual(actual, expected)
+    if isinstance(first, torch.Tensor) or isinstance(second, torch.Tensor):
+      if msg is None:
+        nt.assert_equal(_np(first), _np(second))
+      elif not np.all(_np(first) == _np(second)):
+        raise AssertionError(msg)
+      return
+    super().assertEqual(first, second, msg=msg)
 
   def assertAllClose(self, actual, expected, rtol=1e-7, atol=0.):
     """ Checks that actual and expected arrays or torch tensors are equal. """

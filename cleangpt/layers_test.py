@@ -7,7 +7,7 @@ from cleangpt.torch_test import TorchTestCase
 
 class SoftmaxTest(TorchTestCase):
   """ Softmax layer tests. """
-  def testForward(self):
+  def test_forward(self):
     """Forward method test."""
     inputs = torch.normal(0, 1, (2, 3, 5), dtype=torch.float64)
     actual = layers.Softmax().forward(inputs)
@@ -18,7 +18,7 @@ class SoftmaxTest(TorchTestCase):
 class DropoutTest(TorchTestCase):
   """ Dropout layer tests. """
   # pylint: disable=invalid-name
-  def testForward(self):
+  def test_forward(self):
     """Forward method test."""
     inputs = torch.normal(0, 1, (2, 3, 5), dtype=torch.float64)
     self.reset_seeds()
@@ -30,7 +30,7 @@ class DropoutTest(TorchTestCase):
 
 class LinearTest(TorchTestCase):
   """ Linear layer test. """
-  def testForward(self):
+  def test_forward(self):
     """Forward method test."""
     inputs = torch.normal(0, 1, (5, 3, 2))
     self.reset_seeds()
@@ -42,7 +42,7 @@ class LinearTest(TorchTestCase):
 
 class AttentionTest(TorchTestCase):
   """ Attention layer test. """
-  def testForward(self):
+  def test_forward(self):
     """Forward method test."""
     inputs = torch.normal(0, 1, (3, 5, 4), dtype=torch.float64)
 
