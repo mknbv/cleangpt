@@ -79,6 +79,22 @@ class GPT(nn.Module):
     return self.output(block_outputs)
 
 
-def make(**kwargs):
+def configs(config_name=None):
+  """Returns the dictionary of default configurations."""
+  if config_name is not None:
+    all_configs = configs()
+    return all_configs[config_name]
+  return {
+      "nano": dict(nblocks=3, nheads=3, embedding_size=48),
+      "micro": dict(nblocks=4, nheads=4, embedding_size=128),
+      "mini": dict(nblocks=6, nheads=6, embedding_size=192),
+  }
+
+
+def make(vocab_size, seqlen, config_name=None, **kwargs):
   """Creates a GPT instance."""
-  return GPT.make(**kwargs)
+  if config_name is not None:
+    kwargs = configs(config_name) | kwargs
+    if "output_size" not in kwargs:
+      kwargs["output_size"] = vocab_size
+  return GPT.make(vocab_size=vocab_size, seqlen=seqlen, **kwargs)
