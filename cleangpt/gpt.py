@@ -77,3 +77,8 @@ class GPT(nn.Module):
     embedding_outputs = self.embedding(inputs)
     block_outputs = self.blocks(embedding_outputs)
     return self.output(block_outputs)
+
+
+def make(**kwargs):
+  """Creates a GPT instance."""
+  return GPT.make(**kwargs)
