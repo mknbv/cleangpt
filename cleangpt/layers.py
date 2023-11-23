@@ -65,7 +65,7 @@ class Dropout(nn.Module):
 
 class Linear(nn.Module):
   """Linear transformation."""
-  def __init__(self, input_features, output_features):
+  def __init__(self, input_features, output_features, bias=True):
     super().__init__()
     bound = 1 / sqrt(input_features)
     self.weight = nn.Parameter(
@@ -74,7 +74,7 @@ class Linear(nn.Module):
     )
     self.bias = nn.Parameter(
         torch.empty(output_features).uniform_(-bound, bound)
-    )
+    ) if bias else torch.zeros(output_features)
 
   def forward(self, inputs):
     """Returns the result of the linear transformation of the inputs."""
@@ -87,17 +87,13 @@ class Attention(nn.Module):
 
   See https://arxiv.org/pdf/1706.03762.pdf
   """
-  def __init__(self, embedding_size, nheads,
-               attn_pdrop=0.1, out_pdrop=0.1):
+  def __init__(self, embedding_size, nheads, attn_pdrop=0.1):
     super().__init__()
     if embedding_size % nheads != 0:
       raise ValueError(f"{embedding_size=} does not divide {nheads=}")
     self.input_linear = Linear(embedding_size, 3 * embedding_size)
     self.attn_dropout = Dropout(attn_pdrop)
-    self.output_module = nn.Sequential(
-        Linear(embedding_size, embedding_size),
-        Dropout(out_pdrop)
-    )
+    self.output_linear = Linear(embedding_size, embedding_size)
     self.nheads = nheads
 
   def forward(self, inputs, return_attn_weights=False):
@@ -122,7 +118,7 @@ class Attention(nn.Module):
 
     # batch_size x nheads x seqlen x hidden_dim
     attn_output = attn_weights @ values
-    output = self.output_module(
+    output = self.output_linear(
         attn_output.transpose(1, 2)
         .reshape(batch_size, seqlen, embedding_size)
     )
@@ -136,6 +132,8 @@ class LayerNorm(nn.Module):
   """
   def __init__(self, normalized_shape, eps=1e-5):
     super().__init__()
+    if isinstance(normalized_shape, int):
+      normalized_shape = (normalized_shape,)
     self.normalized_shape = normalized_shape
     self.eps = eps
     self.weight = nn.Parameter(torch.ones(*normalized_shape))

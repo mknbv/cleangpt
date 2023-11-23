@@ -54,7 +54,6 @@ class AttentionTest(TorchTestCase):
     attention_layer = layers.Attention(
         embedding_size=4, nheads=2,
         attn_pdrop=0.2,
-        out_pdrop=0.0,  # pytorch attention does not support this
     ).double()
     self.reset_seeds()
     actual  = attention_layer.forward(inputs, return_attn_weights=True)
@@ -70,9 +69,9 @@ class AttentionTest(TorchTestCase):
     self.tensor_assign(attention_nn.in_proj_bias,
                        attention_layer.input_linear.bias)
     self.tensor_assign(attention_nn.out_proj.weight,
-                       attention_layer.output_module[0].weight)
+                       attention_layer.output_linear.weight)
     self.tensor_assign(attention_nn.out_proj.bias,
-                       attention_layer.output_module[0].bias)
+                       attention_layer.output_linear.bias)
 
     attn_mask = nn.Transformer.generate_square_subsequent_mask(inputs.shape[1])
     self.reset_seeds()
