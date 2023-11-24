@@ -1,8 +1,16 @@
 """ Layers unit testing. """
+from unittest import skipIf
 import torch
 from torch import nn
 from cleangpt import layers
 from cleangpt.torch_test import TorchTestCase
+
+
+HAVE_MINGPT = True
+try:
+  from mingpt.model import GPT, CausalSelfAttention
+except ImportError:
+  HAVE_MINGPT = False
 
 
 class SoftmaxTest(TorchTestCase):
@@ -85,6 +93,38 @@ class AttentionTest(TorchTestCase):
     self.assertAllClose(actual[1], expected[1])
     self.assertEqual(actual[1] == 0, expected[1] == 0)
     self.assertAllClose(actual[0], expected[0])
+
+  @skipIf(not HAVE_MINGPT,
+          "could not import mingpt; skipping attention layer test")
+  def test_forward_mingpt(self):
+    """Test forward method by comparing the results with mingpt layer."""
+    inputs = torch.normal(0, 1, (1, 2, 4), dtype=torch.float64)
+    attention_layer = layers.Attention(embedding_size=4,
+                                       nheads=2,
+                                       attn_pdrop=0.1).double()
+    config = GPT.get_default_config()
+    config.block_size = 2
+    config.n_embd = 4
+    config.n_head = 2
+    config.attn_pdrop = 0.1
+    config.resid_pdrop = 0.
+    mingpt_attention = CausalSelfAttention(config).double()
+
+    self.tensor_assign(mingpt_attention.c_attn.weight,
+                       attention_layer.input_linear.weight)
+    self.tensor_assign(mingpt_attention.c_attn.bias,
+                       attention_layer.input_linear.bias)
+    self.tensor_assign(mingpt_attention.c_proj.weight,
+                       attention_layer.output_linear.weight)
+    self.tensor_assign(mingpt_attention.c_proj.bias,
+                       attention_layer.output_linear.bias)
+
+    self.reset_seeds()
+    actual = attention_layer(inputs)
+    self.reset_seeds()
+    expected = mingpt_attention(inputs)
+
+    self.assertAllClose(actual, expected)
 
 
 class LayerNormTest(TorchTestCase):
