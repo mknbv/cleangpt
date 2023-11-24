@@ -20,7 +20,7 @@ class GPTTest(TorchTestCase):
   def test_params(self):
     """Tests the number of parameters of the GPT instance."""
     nparams = sum(1 for _ in self.gpt.parameters())
-    self.assertEqual(nparams, 2 + 10 * 3 + 2 + 1)
+    self.assertEqual(nparams, 2 + 12 * 3 + 2 + 1)
     shapes = [p.shape for p in self.gpt.parameters()]
     self.assertEqual(shapes, [
         (8, 4),               # vocab emb
@@ -29,6 +29,7 @@ class GPTTest(TorchTestCase):
           (4,), (4,),         # layer norm
           (12, 4), (12,),     # attention input layer
           (4, 4), (4,),       # attention output layer
+          (4,), (4,),         # layer norm
           (16, 4), (16,),     # block.second first layer
           (4, 16), (4,),      # block.second second layer
         ] * 3,                # nblocks

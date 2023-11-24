@@ -6,8 +6,7 @@ from cleangpt import layers
 
 class Block(nn.Module):
   """A building block of the GPT model."""
-  def __init__(self, embedding_size,
-               out_pdrop=0.1, **attention_kwargs):
+  def __init__(self, embedding_size, out_pdrop=0.1, **attention_kwargs):
     super().__init__()
     self.first = nn.Sequential(
         layers.LayerNorm(embedding_size),
@@ -15,6 +14,7 @@ class Block(nn.Module):
         layers.Dropout(out_pdrop),
     )
     self.second = nn.Sequential(
+        layers.LayerNorm(embedding_size),
         layers.Linear(embedding_size, 4 * embedding_size),
         layers.ApproxGELU(),
         layers.Linear(4 * embedding_size, embedding_size),
