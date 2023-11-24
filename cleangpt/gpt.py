@@ -1,4 +1,5 @@
 """GPT implementation."""
+from math import sqrt
 import torch
 from torch import nn
 from cleangpt import layers
@@ -20,6 +21,11 @@ class Block(nn.Module):
         layers.Linear(4 * embedding_size, embedding_size),
         layers.Dropout(out_pdrop),
     )
+
+  def projection_weights(self):
+    """Iterates over the 'projection' weights of this block."""
+    yield self.first[1].output_linear.weight
+    yield self.second[3].weight
 
   def forward(self, inputs):
     """Returns the result of applying the block to the inputs."""
@@ -63,6 +69,7 @@ class GPT(nn.Module):
         layers.LayerNorm(embedding_size),
         layers.Linear(embedding_size, output_size, bias=False),
     )
+    self.weight_init()
 
   @classmethod
   def make(cls, vocab_size, seqlen, embedding_size,
@@ -71,6 +78,29 @@ class GPT(nn.Module):
     embedding = Embedding(vocab_size, seqlen,
                           embedding_size, embedding_pdrop)
     return cls(embedding, embedding_size=embedding_size, **init_kwargs)
+
+  def projection_weights(self):
+    """Iterates over the 'projection' weights of this GPT."""
+    for block in self.blocks:
+      yield from block.projection_weights()
+
+  def weight_init(self, mean=0., std=0.02):
+    """Weight initialization for a submodule of this GPT."""
+    def init(module):
+      if isinstance(module, layers.Linear):
+        nn.init.normal_(module.weight, mean=mean, std=std)
+        if module.bias is not None:
+          nn.init.zeros_(module.bias)
+      elif isinstance(module, nn.Embedding):
+        nn.init.normal_(module.weight, mean=mean, std=std)
+      elif isinstance(module, layers.LayerNorm):
+        nn.init.ones_(module.weight)
+        nn.init.zeros_(module.bias)
+
+    self.apply(init)
+    nblocks = len(self.blocks)
+    for weight in self.projection_weights():
+      nn.init.normal_(weight, mean=mean, std=std / sqrt(2 * nblocks))
 
   def forward(self, inputs):
     """Returns the result of processing the inputs with this model."""
