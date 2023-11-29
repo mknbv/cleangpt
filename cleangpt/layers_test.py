@@ -135,3 +135,13 @@ class LayerNormTest(TorchTestCase):
     actual = layers.LayerNorm((3, 5)).double().forward(inputs)
     expected = nn.LayerNorm((3, 5)).double().forward(inputs)
     self.assertAllClose(actual, expected)
+
+
+class CrossEntropyWithTest(TorchTestCase):
+  """Cross entropy module test."""
+  def test_forward(self):
+    inputs = torch.normal(0, 1, (2, 3, 5), dtype=torch.float64)
+    labels = torch.randint(0, 3, (2, 5))
+    actual = layers.CrossEntropy().forward(inputs, labels)
+    expected = nn.CrossEntropyLoss().forward(inputs, labels)
+    self.assertAllClose(actual, expected)

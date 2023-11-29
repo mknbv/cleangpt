@@ -49,6 +49,28 @@ class Softmax(nn.Module):
     return softmax(logits, self.dim)
 
 
+def log_softmax(logits):
+  """Computes log of the the softmax function."""
+  logits = logits - torch.max(logits, dim=-1, keepdims=True).values
+  return logits - torch.logsumexp(logits, dim=-1, keepdims=True)
+
+
+class CrossEntropy(nn.Module):
+  """Cross entropy with labels from logits."""
+  def forward(self, logits, labels):
+    """Computes cross entropy of the given logits wrt labels."""
+    expected_labels_shape = logits.shape[:1] + logits.shape[2:]
+    if labels.shape != expected_labels_shape:
+      raise ValueError(f"{labels.shape=}, while expected "
+                       f"shape {expected_labels_shape}")
+    logits = torch.flatten(logits.transpose(1, -1), 0, -2)
+    size = logits.shape[0]
+    onehot = torch.zeros(logits.shape)
+    onehot[torch.arange(size), torch.flatten(labels)] = 1
+    log_probs = log_softmax(logits)
+    return -torch.mean(torch.sum(log_probs * onehot, -1))
+
+
 class Dropout(nn.Module):
   """Tensor elements are zeroed with probability prob during training."""
   def __init__(self, prob=0.5):
