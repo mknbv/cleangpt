@@ -19,3 +19,14 @@ def get_random_page(data_path=DATA_PATH, timeout=1):
     with open(filepath, "w", encoding="utf8") as outfile:
       outfile.write(content)
   return content
+
+
+def tokenize(text, inverse=False, special_chars=("—",)):
+  """Tokenize the text."""
+  if inverse:
+    chars = ({i: chr(i) for i in range(128)}
+             | {128 + i: ch for i, ch in enumerate(special_chars)})
+    return ''.join(chars[i] for i in text)
+  chars = ({chr(i): i for i in range(128)}
+           | {ch: 128 + i for i, ch in enumerate(special_chars)})
+  return [chars[ch] for ch in text if ch in chars]
