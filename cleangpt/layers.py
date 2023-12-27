@@ -96,12 +96,12 @@ class Linear(nn.Module):
     )
     self.bias = nn.Parameter(
         torch.empty(output_features).uniform_(-bound, bound)
-    ) if bias else torch.zeros(output_features)
+    ) if bias else None
 
   def forward(self, inputs):
     """Returns the result of the linear transformation of the inputs."""
     return (torch.squeeze(self.weight @ inputs[..., None], -1)
-            + self.bias)
+            + (self.bias if self.bias is not None else 0))
 
 
 class Attention(nn.Module):

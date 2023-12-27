@@ -96,6 +96,9 @@ class GPT(nn.Module):
       elif isinstance(module, layers.LayerNorm):
         nn.init.ones_(module.weight)
         nn.init.zeros_(module.bias)
+      elif (len(list(module.children())) == 0
+            and len(list(module.parameters())) > 0):
+        raise ValueError(f"unexpected module {module}")
 
     self.apply(init)
     nblocks = len(self.blocks)
@@ -108,6 +111,32 @@ class GPT(nn.Module):
     block_outputs = self.blocks(embedding_outputs)
     return self.output(block_outputs)
 
+  def param_groups(self, weight_decay=0.1):
+    """Creates parameter groups for the optimizer."""
+    decayed = set()
+    non_decayed = set()
+    nparams = 0
+
+    def group(module):
+      nonlocal decayed, non_decayed, nparams
+      if isinstance(module, layers.Linear):
+        decayed.add(module.weight)
+        if module.bias is not None:
+          non_decayed.add(module.bias)
+      elif isinstance(module, nn.Embedding):
+        non_decayed.add(module.weight)
+      elif isinstance(module, layers.LayerNorm):
+        non_decayed.add(module.weight)
+        non_decayed.add(module.bias)
+      elif (len(list(module.children())) == 0
+            and len(list(module.parameters())) > 0):
+        raise ValueError(f"unexpected module {module}")
+
+    self.apply(group)
+    return [
+        {"params": list(decayed), "weight_decay": weight_decay},
+        {"params": list(non_decayed), "weight_decay": 0.}
+    ]
 
 def configs(config_name=None):
   """Returns the dictionary of default configurations."""

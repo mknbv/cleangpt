@@ -127,3 +127,21 @@ class GPTTest(TorchTestCase):
     actual = self.gpt(inputs)
 
     self.assertAllClose(actual, expected)
+
+  def test_param_groups(self):
+    """Tests parameter groups for optimization/weight decay."""
+    param_groups = self.gpt.param_groups(weight_decay=0.01)
+
+    self.assertEqual(len(param_groups), 2)
+    intersection = (set(param_groups[0]["params"])
+                    & set(param_groups[1]["params"]))
+    self.assertFalse(intersection)
+
+    all_params = dict(self.gpt.named_parameters())
+    union = set(p for pg in param_groups for p in pg["params"])
+    skipped = set(n for n, p in all_params.items() if p not in union)
+    self.assertFalse(skipped)
+
+    self.assertFalse(None in union)
+
+    self.assertEqual(sum(len(pg["params"]) for pg in param_groups), 41)
