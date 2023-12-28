@@ -42,12 +42,23 @@ class Embedding(nn.Module):
     self.position_embedding = nn.Embedding(seqlen, embedding_size)
     self.dropout = layers.Dropout(pdrop)
 
+  @property
+  def vocab_size(self):
+    """Vocabulary size of the embedding."""
+    return self.input_embedding.num_embeddings
+
+  @property
+  def seqlen(self):
+    """Expected sequence length of the embedding."""
+    return self.position_embedding.num_embeddings
+
   def forward(self, inputs):
     """Comptues and returns the embeddings of the inputs."""
     _, seqlen = inputs.shape
     if seqlen != self.position_embedding.num_embeddings:
       raise ValueError(
-          f"expected inputs.shape={self.position_embedding.num_embeddings}, "
+          "expected inputs.shape[-1]="
+          f"{self.position_embedding.num_embeddings}, "
           f"got {inputs.shape=}"
       )
     positions = torch.arange(seqlen)
@@ -70,6 +81,16 @@ class GPT(nn.Module):
         layers.Linear(embedding_size, output_size, bias=False),
     )
     self.weight_init()
+
+  @property
+  def vocab_size(self):
+    """Vocabulary size."""
+    return self.embedding.vocab_size
+
+  @property
+  def seqlen(self):
+    """Input sequence length."""
+    return self.embedding.seqlen
 
   @classmethod
   def make(cls, vocab_size, seqlen, embedding_size,
@@ -137,6 +158,28 @@ class GPT(nn.Module):
         {"params": list(decayed), "weight_decay": weight_decay},
         {"params": list(non_decayed), "weight_decay": 0.}
     ]
+
+  @torch.no_grad
+  def generate(self, tokens, num_new_tokens,
+               temperature=1., sample=False,
+               topk=None):
+    """Generates tokens after the inputs using the model."""
+    for _ in range(num_new_tokens):
+      inputs = tokens[:, -self.seqlen:]
+      logits = self(inputs)[:, -1, :] / temperature
+      if topk is not None:
+        topk_logits, _ = torch.topk(logits, topk, dim=-1)
+        logits[
+            logits < topk_logits.min(dim=-1, keepdim=True).values
+        ] = -float('inf')
+      probs = layers.softmax(logits)
+      if sample:
+        new_tokens = torch.multinomial(probs, num_samples=1)
+      else:
+        new_tokens = torch.max(logits, dim=-1, keepdims=True).indices
+      tokens = torch.cat([tokens, new_tokens], 1)
+    return tokens
+
 
 def configs(config_name=None):
   """Returns the dictionary of default configurations."""
