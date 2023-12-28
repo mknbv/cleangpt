@@ -24,6 +24,18 @@ def get_random_page(data_path=DATA_PATH, timeout=1):
   return content
 
 
+def most_recent_file(dirpath=DATA_PATH):
+  """Returns the most recent file from the directory path."""
+  maxtime = 0
+  result = None
+  for name in os.listdir(dirpath):
+    path = os.path.join(dirpath, name)
+    if os.path.isfile(path) and (newtime := os.path.getctime(path)) > maxtime:
+      result = name
+      maxtime = newtime
+  return result
+
+
 def tokenize(text, inverse=False, special_chars=("—",)):
   """Tokenize the text."""
   if inverse:
@@ -37,9 +49,10 @@ def tokenize(text, inverse=False, special_chars=("—",)):
 
 class TextDataset(Dataset):
   """Dataset of tokens."""
-  def __init__(self, tokens, seqlen):
+  def __init__(self, tokens, seqlen, filename=None):
     self.tokens = tokens
     self.seqlen = seqlen
+    self.filename = filename
 
   @classmethod
   def from_text(cls, text, **kwargs):
@@ -65,4 +78,6 @@ def make_loader(content=None, seqlen=128, batch_size=128):
   """Creates a dataloader from a random SEOP webpage."""
   if content is None:
     content = get_random_page()
-  return TextDataset.from_text(content, seqlen=seqlen).to_loader(batch_size)
+    filename = most_recent_file()
+  return TextDataset.from_text(
+      content, seqlen=seqlen, filename=filename).to_loader(batch_size)
