@@ -217,6 +217,13 @@ def make_encoder(encoder_filepath=os.path.join(CACHE_PATH, "encoder.json"),
   # 256 individual byte tokens, 50,000 merged tokens,
   # and 1 special <|endoftext|> token
   assert len(encoder) == 50257, len(encoder)
+  if nmerged is not None:
+    assert list(encoder.values()) == list(range(len(encoder)))
+    # always keep the first 255 bytes, for the rest take the first nmerged
+    encoder = (
+        {ch: i for ch, i in encoder.items() if i <= 255}
+        | {ch: i for ch, i in encoder.items() if 255 < i <= 255 + nmerged}
+    )
 
   # load vocab.bpe that contains the bpe merges, i.e. the bpe tree structure
   # in the form tuples (a, b), that indicate that (a, b) is to be merged to
