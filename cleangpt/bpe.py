@@ -203,7 +203,9 @@ def get_file(url, filepath, timeout=1):
       outfile.write(response.content)
 
 
-def make_encoder():
+def make_encoder(encoder_filepath=os.path.join(CACHE_PATH, "encoder.json"),
+                 vocab_filepath=os.path.join(CACHE_PATH, "vocab.bpe"),
+                 nmerged=None):
   """Returns an instance of the GPT BPE Encoder/Decoder."""
   os.makedirs(CACHE_PATH, exist_ok=True)
 
@@ -229,5 +231,10 @@ def make_encoder():
       tuple(merge_str.split()) for merge_str in bpe_data.split('\n')[1:-1]
   ]
   assert len(bpe_merges) == 50000, len(bpe_merges)
+  if nmerged is not None:
+    bpe_merges = bpe_merges[:nmerged]
+    assert list(encoder.values()) == list(range(len(encoder)))
+    encoder = ({ch: i for ch, i in encoder.items() if i < 256}
+               | {''.join(k): encoder[''.join(k)] for k in bpe_merges})
 
   return BytesPairEncoder(encoder, bpe_merges)
