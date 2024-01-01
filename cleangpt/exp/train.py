@@ -17,6 +17,11 @@ class Trainer:
       optimizer = AdamW(model.param_groups(weight_decay), **optimizer_kwargs)
     self.optimizer = optimizer
 
+  @property
+  def device(self):
+    """Returns the device used for training."""
+    return next(self.model.parameters()).device
+
   def loss(self, logits, targets):
     """Computes the loss function value."""
     return self.xent(logits.transpose(1, 2), targets)
@@ -25,6 +30,7 @@ class Trainer:
     """Training epoch iterator."""
     self.model.train()
     for inputs, targets in tqdm(data_loader, leave=leave_tqdm):
+      inputs, targets = inputs.to(self.device), targets.to(self.device)
       outputs = self.model(inputs)
       loss = self.loss(outputs, targets)
 

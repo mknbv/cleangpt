@@ -65,7 +65,7 @@ class CrossEntropy(nn.Module):
                        f"shape {expected_labels_shape}")
     logits = torch.flatten(logits.transpose(1, -1), 0, -2)
     size = logits.shape[0]
-    onehot = torch.zeros(logits.shape)
+    onehot = torch.zeros(logits.shape, device=logits.device)
     onehot[torch.arange(size), torch.flatten(labels)] = 1
     log_probs = log_softmax(logits)
     return -torch.mean(torch.sum(log_probs * onehot, -1))
@@ -133,7 +133,7 @@ class Attention(nn.Module):
     # * (batch_size x nheads x hidden_dim x seqlen
     # = (batch_size x nheads x seqlen x seqlen)
     softmax_input = queries @ keys.transpose(-1, -2) / sqrt(keys.size(-1))
-    mask = torch.tril(torch.ones(seqlen, seqlen))
+    mask = torch.tril(torch.ones(seqlen, seqlen)).to(softmax_input.device)
     softmax_input = softmax_input.masked_fill(mask == 0, -float('inf'))
     softmax_output = softmax(softmax_input)
     attn_weights = self.attn_dropout(softmax_output)

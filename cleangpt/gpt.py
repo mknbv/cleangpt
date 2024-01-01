@@ -61,7 +61,8 @@ class Embedding(nn.Module):
           f"{self.position_embedding.num_embeddings}, "
           f"got {inputs.shape=}"
       )
-    positions = torch.arange(seqlen)
+    positions = torch.arange(
+        seqlen, device=self.position_embedding.weight.device)
     return self.dropout(self.input_embedding(inputs)
                         + self.position_embedding(positions))
 
