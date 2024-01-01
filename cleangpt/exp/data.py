@@ -14,6 +14,8 @@ DATA_PATH = "../data/"
 
 def get_random_page(data_path=DATA_PATH, timeout=1):
   """Returns the contents of a random url page."""
+  if not os.path.isdir(data_path):
+    os.makedirs(data_path)
   response = requests.get(URL, timeout=timeout)
   response.raise_for_status()
   soup = BeautifulSoup(response.text, "html.parser")
