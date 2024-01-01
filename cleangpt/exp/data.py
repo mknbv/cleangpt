@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 import torch
 from torch.utils.data import Dataset, DataLoader, RandomSampler
+from cleangpt.bpe import make_encoder
 
 
 URL = "https://plato.stanford.edu/cgi-bin/encyclopedia/random"
@@ -37,7 +38,7 @@ def most_recent_file(dirpath=DATA_PATH):
 
 
 def tokenize(text, inverse=False, special_chars=("—",)):
-  """Tokenize the text."""
+  """Character-level tokenization of text."""
   if inverse:
     chars = ({i: chr(i) for i in range(128)}
              | {128 + i: ch for i, ch in enumerate(special_chars)})
@@ -49,10 +50,11 @@ def tokenize(text, inverse=False, special_chars=("—",)):
 
 class TextDataset(Dataset):
   """Dataset of tokens."""
-  def __init__(self, tokens, seqlen, filename=None):
+  def __init__(self, tokens, seqlen, filename=None, decode=None):
     self.tokens = tokens
     self.seqlen = seqlen
     self.filename = filename
+    self.decode = decode
 
   @classmethod
   def from_text(cls, text, **kwargs):
@@ -74,10 +76,12 @@ class TextDataset(Dataset):
                       sampler=sampler(self), **kwargs)
 
 
-def make_loader(content=None, seqlen=128, batch_size=128):
+def make_loader(content=None, seqlen=128, batch_size=128, **encoder_kwargs):
   """Creates a dataloader from a random SEOP webpage."""
   if content is None:
     content = get_random_page()
     filename = most_recent_file()
-  return TextDataset.from_text(
-      content, seqlen=seqlen, filename=filename).to_loader(batch_size)
+  encoder = make_encoder(**encoder_kwargs)
+  tokens = encoder.encode(content)
+  return TextDataset(tokens, seqlen=seqlen, filename=filename,
+                     decode=encoder.decode).to_loader(batch_size)
