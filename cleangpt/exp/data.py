@@ -70,18 +70,22 @@ class TextDataset(Dataset):
 
   def to_loader(self, batch_size=128,
                 sampler=partial(RandomSampler, replacement=True),
-                **kwargs):
+                num_workers=4, **kwargs):
     """Converts the dataset to DataLoader."""
     return DataLoader(self, batch_size=batch_size,
-                      sampler=sampler(self), **kwargs)
+                      sampler=sampler(self),
+                      num_workers=num_workers,
+                      **kwargs)
 
 
-def make_loader(content=None, seqlen=128, batch_size=128, **encoder_kwargs):
+def make_loader(content=None, seqlen=128, batch_size=128,
+                num_workers=4, **encoder_kwargs):
   """Creates a dataloader from a random SEOP webpage."""
   if content is None:
     content = get_random_page()
     filename = most_recent_file()
   encoder = make_encoder(**encoder_kwargs)
   tokens = encoder.encode(content)
-  return TextDataset(tokens, seqlen=seqlen, filename=filename,
-                     decode=encoder.decode).to_loader(batch_size)
+  return TextDataset(
+      tokens, seqlen=seqlen, filename=filename,
+      decode=encoder.decode).to_loader(batch_size, num_workers=num_workers)
