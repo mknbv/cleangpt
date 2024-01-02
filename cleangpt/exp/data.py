@@ -12,11 +12,13 @@ URL = "https://plato.stanford.edu/cgi-bin/encyclopedia/random"
 DATA_PATH = "../data/"
 
 
-def get_random_page(data_path=DATA_PATH, timeout=1):
-  """Returns the contents of a random url page."""
+def get_page(url=URL, data_path=DATA_PATH, timeout=1):
+  """Returns the contents of a SEOP page."""
+  if not url.startswith("https://plato.stanford.edu/"):
+    raise ValueError(f"invalid url; expected a SEOP page, got {url}")
   if not os.path.isdir(data_path):
     os.makedirs(data_path)
-  response = requests.get(URL, timeout=timeout)
+  response = requests.get(url, timeout=timeout)
   response.raise_for_status()
   soup = BeautifulSoup(response.text, "html.parser")
   content = str(soup.find("div", id="aueditable"))
@@ -64,9 +66,9 @@ class TextDataset(Dataset):
     return cls(tokenize(text), **kwargs)
 
   @classmethod
-  def from_random_page(cls, encoder=None, **kwargs):
+  def from_page(cls, url=URL, encoder=None, **kwargs):
     """Creates an instance from random SEOP page."""
-    content = get_random_page()
+    content = get_page(url)
     filename = most_recent_file()
     if encoder is None:
       return cls.from_text(content, filename=filename, **kwargs)
@@ -90,9 +92,10 @@ class TextDataset(Dataset):
                       **kwargs)
 
 
-def make_loader(seqlen=128, batch_size=128, num_workers=4, **encoder_kwargs):
+def make_loader(url=URL, seqlen=128, batch_size=128,
+                num_workers=4, **encoder_kwargs):
   """Creates a dataloader from a random SEOP webpage."""
   encoder = make_encoder(**encoder_kwargs)
-  return TextDataset.from_random_page(
-      seqlen=seqlen, encoder=encoder).to_loader(
+  return TextDataset.from_page(
+      url=url, seqlen=seqlen, encoder=encoder).to_loader(
           batch_size, num_workers=num_workers)
