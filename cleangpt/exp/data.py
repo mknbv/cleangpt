@@ -63,6 +63,16 @@ class TextDataset(Dataset):
     """Creates an instance from the given text."""
     return cls(tokenize(text), **kwargs)
 
+  @classmethod
+  def from_random_page(cls, encoder=None, **kwargs):
+    """Creates an instance from random SEOP page."""
+    content = get_random_page()
+    filename = most_recent_file()
+    if encoder is None:
+      return cls.from_text(content, filename=filename, **kwargs)
+    return cls(encoder.encode(content), filename=filename,
+               decode=encoder.decode, **kwargs)
+
   def __len__(self):
     return len(self.tokens) - self.seqlen
 
@@ -80,14 +90,9 @@ class TextDataset(Dataset):
                       **kwargs)
 
 
-def make_loader(content=None, seqlen=128, batch_size=128,
-                num_workers=4, **encoder_kwargs):
+def make_loader(seqlen=128, batch_size=128, num_workers=4, **encoder_kwargs):
   """Creates a dataloader from a random SEOP webpage."""
-  if content is None:
-    content = get_random_page()
-    filename = most_recent_file()
   encoder = make_encoder(**encoder_kwargs)
-  tokens = encoder.encode(content)
-  return TextDataset(
-      tokens, seqlen=seqlen, filename=filename,
-      decode=encoder.decode).to_loader(batch_size, num_workers=num_workers)
+  return TextDataset.from_random_page(
+      seqlen=seqlen, encoder=encoder).to_loader(
+          batch_size, num_workers=num_workers)
