@@ -1,0 +1,129 @@
+"""GPT layers."""
+from math import sqrt
+import torch
+from torch import nn
+
+
+def approx_gelu(inputs):
+  """Applies approximate GELU activation function.
+
+  This is a smoother version of the RELU.
+  Original paper: https://arxiv.org/abs/1606.08415.
+  """
+  return 0.5 * inputs * (
+      1 + torch.tanh(
+          sqrt(2 / torch.pi)
+          * (inputs + 0.044715 * torch.pow(inputs, 3))
+      )
+  )
+
+
+class ApproxGELU(nn.Module):
+  """Apprximate GELU activation function.
+
+  This is a smoother version of the RELU.
+  Original paper: https://arxiv.org/abs/1606.08415.
+  """
+  def forward(self, inputs):
+    """Applyies GELU activation to the inputs."""
+    return approx_gelu(inputs)
+
+
+def softmax(logits, dim=-1):
+  """Softmax across the specified dimension of inputs."""
+  logits = logits - torch.max(logits, dim=dim, keepdims=True).values
+  return (
+      torch.exp(logits)
+      / torch.sum(torch.exp(logits), dim=dim, keepdims=True)
+  )
+
+
+class Softmax(nn.Module):
+  """Softmax across the specified dimension of inputs."""
+  def __init__(self, dim=-1):
+    super().__init__()
+    self.dim = dim
+
+  def forward(self, logits):
+    """Applies softmax activation to the inputs."""
+    return softmax(logits, self.dim)
+
+
+class Dropout(nn.Module):
+  """Tensor elements are zeroed with probability prob during training."""
+  def __init__(self, prob=0.5):
+    super().__init__()
+    self.prob = prob
+
+  def forward(self, inputs):
+    """Applies dropout layer to the inputs."""
+    if not self.training:
+      return inputs
+    probs = torch.full_like(inputs, 1 - self.prob)
+    return inputs * torch.bernoulli(probs) / (1 - self.prob)
+
+
+class Linear(nn.Module):
+  """Linear transformation."""
+  def __init__(self, input_features, output_features):
+    super().__init__()
+    bound = 1 / sqrt(input_features)
+    self.weight = nn.Parameter(
+        torch.empty(output_features, input_features)
+        .uniform_(-bound, bound)
+    )
+    self.bias = nn.Parameter(
+        torch.empty(output_features).uniform_(-bound, bound)
+    )
+
+  def forward(self, inputs):
+    """Returns the result of the linear transformation of the inputs."""
+    return (torch.squeeze(self.weight @ inputs[..., None], -1)
+            + self.bias)
+
+
+class Attention(nn.Module):
+  """Attention as described in the 'Attention is All You Need' paper.
+
+  See https://arxiv.org/pdf/1706.03762.pdf
+  """
+  def __init__(self, embedding_size, nheads,
+               attn_pdrop=0.1, out_pdrop=0.1):
+    super().__init__()
+    if embedding_size % nheads != 0:
+      raise ValueError(f"{embedding_size=} does not divide {nheads=}")
+    self.input_linear = Linear(embedding_size, 3 * embedding_size)
+    self.attn_dropout = Dropout(attn_pdrop)
+    self.output_module = nn.Sequential(
+        Linear(embedding_size, embedding_size),
+        Dropout(out_pdrop)
+    )
+    self.nheads = nheads
+
+  def forward(self, inputs, return_attn_weights=False):
+    """Applies masked multi-head self attention to the inputs."""
+    batch_size, seqlen, embedding_size = inputs.shape
+    queries, keys, values = self.input_linear(inputs).split(
+        embedding_size, -1)
+    queries, keys, values = map(
+        lambda t: t.reshape(batch_size, seqlen,
+                            self.nheads, -1).transpose(1, 2),
+        (queries, keys, values)
+    )
+
+    # (batch_size x nheads x seqlen x hidden_dim)
+    # * (batch_size x nheads x hidden_dim x seqlen
+    # = (batch_size x nheads x seqlen x seqlen)
+    softmax_input = queries @ keys.transpose(-1, -2) / sqrt(keys.size(-1))
+    mask = torch.tril(torch.ones(seqlen, seqlen))
+    softmax_input = softmax_input.masked_fill(mask == 0, -float('inf'))
+    softmax_output = softmax(softmax_input)
+    attn_weights = self.attn_dropout(softmax_output)
+
+    # batch_size x nheads x seqlen x hidden_dim
+    attn_output = attn_weights @ values
+    output = self.output_module(
+        attn_output.transpose(1, 2)
+        .reshape(batch_size, seqlen, embedding_size)
+    )
+    return (output, attn_weights) if return_attn_weights else output
