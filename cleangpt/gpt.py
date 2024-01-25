@@ -93,6 +93,17 @@ class GPT(nn.Module):
     """Input sequence length."""
     return self.embedding.seqlen
 
+  @property
+  def size(self):
+    """Returns the number of parameters of this model."""
+    result = 0
+    for p in self.parameters():
+      acc = 1
+      for s in p.size():
+        acc *= s
+      result += acc
+    return result
+
   @classmethod
   def make(cls, vocab_size, seqlen, embedding_size,
            embedding_pdrop=0.1, **init_kwargs):
@@ -191,6 +202,11 @@ def configs(config_name=None):
       "nano": dict(nblocks=3, nheads=3, embedding_size=48),
       "micro": dict(nblocks=4, nheads=4, embedding_size=128),
       "mini": dict(nblocks=6, nheads=6, embedding_size=192),
+      "gopher-44m": dict(nblocks=8, nheadss=16, embedding_size=512),
+      "gpt2": dict(nblocks=12, nheads=12, embedding_size=768),
+      "gpt2-medium": dict(nblocks=24, nheads=16, embedding_size=1024),
+      "gpt2-large": dict(nblocks=36, nheads=20, embedding_size=1280),
+      "gpt2-xl": dict(nblocks=48, nheads=25, embedding_size=1600),
   }
 
 
