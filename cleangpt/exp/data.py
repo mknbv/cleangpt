@@ -12,7 +12,19 @@ URL = "https://plato.stanford.edu/cgi-bin/encyclopedia/random"
 DATA_PATH = "../data/"
 
 
-def get_page(url=URL, data_path=DATA_PATH, timeout=1):
+def remove_bib(soup):
+  """Removes bibliography from the soup."""
+  tag = soup.find("h2", string="Bibliography")
+  while tag:
+    nxt = tag.find_next_sibling()
+    tag.decompose()
+    tag = nxt
+
+
+def get_page(url=URL,
+             data_path=DATA_PATH,
+             timeout=1,
+             remove_bibliography=True):
   """Returns the contents of a SEOP page."""
   if not url.startswith("https://plato.stanford.edu/"):
     raise ValueError(f"invalid url; expected a SEOP page, got {url}")
@@ -21,6 +33,8 @@ def get_page(url=URL, data_path=DATA_PATH, timeout=1):
   response = requests.get(url, timeout=timeout)
   response.raise_for_status()
   soup = BeautifulSoup(response.text, "html.parser")
+  if remove_bibliography:
+    remove_bib(soup)
   content = str(soup.find("div", id="aueditable"))
   if data_path is not None:
     filepath = os.path.join(data_path, response.url.split("/")[-2] + ".html")
