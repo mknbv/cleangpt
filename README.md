@@ -8,3 +8,5 @@ re-connections, modify the `jupyter_notebook_config.py` file by adding
 ```{python}
 c.ServerApp.rate_limit_window = float("inf")
 ```
+To make sure that during training bokeh updates the plot as expected
+I had to use jupyterlab instead of jupyter.
